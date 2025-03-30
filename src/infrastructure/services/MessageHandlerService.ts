@@ -1,15 +1,29 @@
 import {Message, MessageType} from '../../domain/entities/Message';
 import {prisma} from '../../infrastructure/database/prisma/prisma';
 import { MessageSenderService } from './MessageSenderService';
+import { OpenAIService } from '../ai/OpenAIService';
+import { ConversationMemoryService } from '../../application/services/ConversationMemoryService';
 
 export class MessageHandlerService {
-  constructor(private messageSender: MessageSenderService) {}
+  private openAIService: OpenAIService;
+  private memoryService: ConversationMemoryService;
+  
+  constructor(private messageSender: MessageSenderService) {
+    this.openAIService = new OpenAIService();
+    this.memoryService = new ConversationMemoryService();
+  }
 
-  async handlerMessage(message:Message): Promise<void>{
+  async handlerMessage(message: Message): Promise<void>{
     try{
       console.log('Mensagem recebida:', message);
 
       await this.saveMessage(message);
+      
+      // Processar análise de sentimento e extração de informações
+      if (message.type === MessageType.TEXT) {
+        this.processMessageInformation(message);
+      }
+      
       if(this.shouldRespond(message)){
         const response = await this.generateResponse(message);
         await this.sendResponse(message.remoteJid, response);
@@ -49,34 +63,60 @@ export class MessageHandlerService {
     return true; // Responder mensagens individuais
   }
 
-  private async generateResponse(message: Message): Promise<string> {
-    // Aqui você implementa sua lógica de chatbot/resposta
-    // Pode ser desde regras simples até integração com uma API
-    
-    switch (message.type) {
-      case MessageType.TEXT:
-        // Lógica para tratar mensagens de texto
-        if (message.content.toLowerCase().includes('olá') || 
-            message.content.toLowerCase().includes('oi')) {
-          return `Olá ${message.pushName || ''}! Como posso ajudar?`;
-        }
-        break;
-        
-      case MessageType.AUDIO:
-        // Resposta para mensagens de áudio
-        return "Recebi seu áudio, mas ainda não consigo processá-lo.";
-        
-      case MessageType.STICKER:
-        // Resposta para stickers
-        return "Obrigado pelo sticker! 😊";
-        
-      default:
-        // Resposta padrão
-        return "Recebi sua mensagem. Em breve responderemos.";
+  private async processMessageInformation(message: Message): Promise<void> {
+    try {
+      // Executar em paralelo para melhor performance
+      const [sentiment, keyInformation] = await Promise.all([
+        this.openAIService.analyzeSentiment(message.content),
+        this.openAIService.extractKeyInformation(message.content)
+      ]);
+      
+      console.log(`Sentimento detectado: ${sentiment}`);
+      console.log('Informações extraídas:', keyInformation);
+      
+      // Salvar informações extraídas
+      if (Object.keys(keyInformation).length > 0) {
+        await this.memoryService.saveKeyInformation(message.remoteJid, keyInformation);
+      }
+      
+      // Salvar sentimento
+      await this.memoryService.saveSentiment(message.remoteJid, sentiment);
+      
+    } catch (error) {
+      console.error('Erro ao processar informações da mensagem:', error);
     }
-    
-    // Resposta padrão se nenhuma condição for atendida
-    return "Agradecemos seu contato! Como podemos ajudar?";
+  }
+
+  private async generateResponse(message: Message): Promise<string> {
+    try {
+      // Para mensagens de texto, usar o serviço de IA
+      if (message.type === MessageType.TEXT) {
+        // Recuperar informações do usuário para contextualização
+        const userInfo = await this.memoryService.getUserInformation(message.remoteJid);
+        
+        // Gerar resposta com IA, considerando histórico e informações do usuário
+        return await this.openAIService.generateResponse(
+          message.remoteJid,
+          message.pushName || 'Cliente',
+          message.content
+        );
+      }
+      
+      // Para outros tipos de mensagem, manter o comportamento existente
+      switch (message.type) {
+        case MessageType.AUDIO:
+          return "Recebi seu áudio, mas ainda não consigo processá-lo.";
+          
+        case MessageType.STICKER:
+          return "Obrigado pelo sticker! 😊";
+          
+        default:
+          return "Recebi sua mensagem. Como posso ajudar?";
+      }
+    } catch (error) {
+      console.error('Erro ao gerar resposta:', error);
+      return "Desculpe, estou com dificuldades para responder no momento. Por favor, tente novamente mais tarde.";
+    }
   }
 
   private async sendResponse(to: string, message: string): Promise<void> {

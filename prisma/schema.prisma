@@ -16,15 +16,15 @@ enum Role {
 }
 
 model User {
-  id            String          @id @default(uuid())
-  name          String?
-  number        String          @unique
-  role          Role            @default(USER)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  logs          LogsWhatsApp[]
-  conversations Conversation[]
-  sentiments    UserSentiment[]
+  id           String          @id @default(uuid())
+  phoneNumber  String?         @unique @map("phone_number") // Número de telefone com formato @s.whatsapp.net
+  name         String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  metadata     UserMetadata[]
+  sentiments   UserSentiment[]
+  Conversation Conversation[]
+  LogsWhatsApp LogsWhatsApp[]
 
   @@map("users")
 }
@@ -81,17 +81,30 @@ model UserSentiment {
   @@map("user_sentiments")
 }
 
+model UserMetadata {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  key       String // Ex: "aniversario", "conjuge", "local_preferido"
+  value     String // Valor do metadado
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key]) // Um único valor para cada tipo de metadado por usuário
+  @@map("user_metadata")
+}
+
 model Message {
   id           String   @id
-  eventType    String
   remoteJid    String
   pushName     String
-  fromMe       Boolean
-  conversation String   @db.Text
+  conversation String?  @db.Text
   dateTime     DateTime
-  createdAt    DateTime @default(now())
+  eventType    String
   messageType  String
+  fromMe       Boolean
   answered     Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
-  @@map("message")
+  @@map("messages")
 }
