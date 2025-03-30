@@ -1,4 +1,4 @@
-import { prisma } from '../../infrastructure/database/prisma/prisma';
+import { prisma } from '@/infrastructure/database/prisma/prisma';
 
 export class ConversationMemoryService {
   /**

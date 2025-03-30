@@ -1,10 +1,11 @@
-import { EvolutionApiClient } from '../../infrastructure/websocket/EvolutionApiClient';
-import { MessageSenderService } from '../../infrastructure/services/MessageSenderService';
-import { MessageHandlerService } from '../../infrastructure/services/MessageHandlerService';
-import { Message, MessageType } from '../../domain/entities/Message';
+import { IWebSocketClient } from '@/domain/interfaces/IWebSocketClient';
+import { WebSocketClient } from '@/infrastructure/websocket/WebSocketClient';
+import { MessageSenderService } from '@/infrastructure/services/MessageSenderService';
+import { MessageHandlerService } from '@/infrastructure/services/MessageHandlerService';
+import { Message, MessageType } from '@/domain/entities/Message';
 
 export class WebSocketClientService {
-  private client: EvolutionApiClient;
+  private client: WebSocketClient;
   private messageSender: MessageSenderService;
   private messageHandler: MessageHandlerService;
   private apiUrl: string;
@@ -15,10 +16,8 @@ export class WebSocketClientService {
     this.apiUrl = apiUrl;
     this.apiKey = apiKey;
     this.instance = instance;
-    
     // Inicializar o cliente WebSocket
-    this.client = new EvolutionApiClient(this.apiUrl);
-    
+    this.client = new WebSocketClient(this.apiUrl);
     // Inicializar o serviço de envio de mensagens
     this.messageSender = new MessageSenderService(
       this.apiUrl,

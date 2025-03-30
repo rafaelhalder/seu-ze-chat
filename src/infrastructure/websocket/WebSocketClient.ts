@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { EventEmitter } from 'events';
+import type { IWebSocketClient } from '@/domain/interfaces/IWebSocketClient';
 
-export class EvolutionApiClient extends EventEmitter {
+export class WebSocketClient extends EventEmitter implements IWebSocketClient {
   private socket: Socket | null = null;
   private isConnecting: boolean = false;
   private reconnectInterval: NodeJS.Timeout | null = null;
@@ -51,21 +52,6 @@ export class EvolutionApiClient extends EventEmitter {
   
   public isConnected(): boolean {
     return this.socket?.connected || false;
-  }
-  
-  public sendMessage(phone: string, message: string): void {
-    if (!this.isConnected()) {
-      console.warn('Tentando enviar mensagem sem conexão WebSocket');
-      return;
-    }
-    
-    // Formatação do número conforme necessário para a Evolution API
-    const formattedPhone = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
-    
-    this.socket?.emit('send-message', {
-      number: formattedPhone,
-      message: message
-    });
   }
   
   private setupSocketListeners(): void {

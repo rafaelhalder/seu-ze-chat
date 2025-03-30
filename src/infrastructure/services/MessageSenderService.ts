@@ -1,13 +1,14 @@
 import axios from "axios";
-import { EvolutionApiClient } from "../websocket/EvolutionApiClient";
+import { WebSocketClient } from "@/infrastructure/websocket/WebSocketClient";
 import { env } from "@/env";
-export class MessageSenderService{
+import type { IMessageSender } from "@/domain/interfaces/ImessageSender";
+export class MessageSenderService implements IMessageSender{
   private readonly apiBaseUrl: string;
   private readonly apiKey: string;
   private readonly instance: string;
-  private webSocketClient?: EvolutionApiClient;
+  private webSocketClient?: WebSocketClient;
 
-  constructor(apiBaseUrl: string, apiKey: string, instance: string, webSocketClient?: EvolutionApiClient) {
+  constructor(apiBaseUrl: string, apiKey: string, instance: string, webSocketClient?: WebSocketClient) {
     this.apiBaseUrl = apiBaseUrl;
     this.apiKey = apiKey;
     this.instance = instance;
