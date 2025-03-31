@@ -4,9 +4,8 @@ CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
+    "phone_number" TEXT,
     "name" TEXT,
-    "number" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'USER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -64,25 +63,38 @@ CREATE TABLE "user_sentiments" (
 );
 
 -- CreateTable
-CREATE TABLE "message" (
+CREATE TABLE "user_metadata" (
     "id" TEXT NOT NULL,
-    "eventType" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_metadata_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "messages" (
+    "id" TEXT NOT NULL,
     "remoteJid" TEXT NOT NULL,
     "pushName" TEXT NOT NULL,
-    "conversation" TEXT NOT NULL,
+    "conversation" TEXT,
     "dateTime" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "eventType" TEXT NOT NULL,
     "messageType" TEXT NOT NULL,
+    "fromMe" BOOLEAN NOT NULL,
     "answered" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "message_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_number_key" ON "users"("number");
+CREATE UNIQUE INDEX "users_phone_number_key" ON "users"("phone_number");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_sentiments_user_id_date_key" ON "user_sentiments"("user_id", "date");
+CREATE UNIQUE INDEX "user_metadata_user_id_key_key" ON "user_metadata"("user_id", "key");
 
 -- AddForeignKey
 ALTER TABLE "logs_whatsapp" ADD CONSTRAINT "logs_whatsapp_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -95,3 +107,6 @@ ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_conversation_id_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "user_sentiments" ADD CONSTRAINT "user_sentiments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_metadata" ADD CONSTRAINT "user_metadata_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

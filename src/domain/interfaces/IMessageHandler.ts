@@ -1,3 +1,5 @@
+import type { Message } from "../entities/Message";
+
 export interface IMessageHandler {
-  handleMessage(message: any): Promise<void>;
+  handleMessage(message: Message): Promise<void>;
 }

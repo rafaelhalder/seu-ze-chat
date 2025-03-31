@@ -1,34 +1,15 @@
-import { IWebSocketClient } from '@/domain/interfaces/IWebSocketClient';
-import { WebSocketClient } from '@/infrastructure/websocket/WebSocketClient';
-import { MessageSenderService } from '@/infrastructure/services/MessageSenderService';
-import { MessageHandlerService } from '@/infrastructure/services/MessageHandlerService';
+import type { IWebSocketClient } from '@/domain/interfaces/IWebSocketClient';
+import type { IMessageSender } from '@/domain/interfaces/IMessageSender';
+import type { IMessageHandler } from '@/domain/interfaces/IMessageHandler';
 import { Message, MessageType } from '@/domain/entities/Message';
+import type { IWebSocketService } from '@/domain/interfaces/IWebSocketService';
 
-export class WebSocketClientService {
-  private client: WebSocketClient;
-  private messageSender: MessageSenderService;
-  private messageHandler: MessageHandlerService;
-  private apiUrl: string;
-  private apiKey: string;
-  private instance: string;
-  
-  constructor(apiUrl: string, apiKey: string, instance: string) {
-    this.apiUrl = apiUrl;
-    this.apiKey = apiKey;
-    this.instance = instance;
-    // Inicializar o cliente WebSocket
-    this.client = new WebSocketClient(this.apiUrl);
-    // Inicializar o serviço de envio de mensagens
-    this.messageSender = new MessageSenderService(
-      this.apiUrl,
-      this.apiKey,
-      this.instance,
-      this.client // Passar o cliente WebSocket como opção de fallback
-    );
-    
-    // Inicializar o handler de mensagens
-    this.messageHandler = new MessageHandlerService(this.messageSender);
-  }
+export class WebSocketClientService implements IWebSocketService {
+  constructor(
+    private client: IWebSocketClient,
+    private messageSender: IMessageSender,
+    private messageHandler: IMessageHandler
+  ) {}
   
   public initialize(): void {
     this.client.connect();
@@ -44,26 +25,15 @@ export class WebSocketClientService {
   }
   
   /**
-   * Envia mensagem via WebSocket (mantido para compatibilidade)
+   * Envia mensagem via WebSocket
    */
   public sendMessage(event: string, data: any): void {
     this.client.emit(event, data);
   }
   
   /**
-   * Envia mensagem de texto via HTTP API (recomendado)
+   * Configura os listeners de eventos
    */
-  public async sendTextMessage(phoneNumber: string, message: string): Promise<any> {
-    return this.messageSender.sendMessage(phoneNumber, message);
-  }
-  
-  /**
-   * Envia mídia (imagem, vídeo, documento) via HTTP API
-   */
-  public async sendMedia(phoneNumber: string, mediaUrl: string, caption?: string): Promise<any> {
-    return this.messageSender.sendMedia(phoneNumber, mediaUrl, caption);
-  }
-  
   private setupEventListeners(): void {
     // Event listeners para eventos do sistema
     this.client.on('qr', (qrData) => {
@@ -83,7 +53,7 @@ export class WebSocketClientService {
       
       // Se a conversão foi bem-sucedida, passar para o handler
       if (message) {
-        this.messageHandler.handlerMessage(message);
+        this.messageHandler.handleMessage(message);
       }
     });
     
@@ -94,7 +64,7 @@ export class WebSocketClientService {
       // Converter e processar da mesma forma
       const message = this.convertToMessageEntity(evolutionData);
       if (message) {
-        this.messageHandler.handlerMessage(message);
+        this.messageHandler.handleMessage(message);
       }
     });
   }
